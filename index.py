@@ -55,14 +55,18 @@ class inicio:
         self.ven2 = Frame(self.ven, width=1280, height=720)
         self.ven2.place(x=0, y=0)
 
+        self.recognizer = sr.Recognizer()
+        self.detener_grabacion = False
+        self.resultado_texto = StringVar()
+
         #Entry de texto a audio
-        self.txt2 = Entry(self.ven2, width=40, font=("Console", 30), background="#FF4D00")
+        self.txt2 = Label(ventana, textvariable=self.resultado_texto, wraplength=350, font=("Arial", 12))#Entry(self.ven2, width=40, font=("Console", 30), background="#FF4D00")
         self.txt2.place(x=200, y=50)
 
         #Button de voz a texto
-        self.btngrabar = Button(self.ven2, text="Grabar Voz", font=("Console", 30), background="#FF4D00", command=self.grabar)
+        self.btngrabar = Button(self.ven2, text="Grabar", font=("Console", 30), background="#FF4D00", command=self.grabar)
         self.btngrabar.place(x=850, y=250)
-        self.btnrepro = Button(self.ven2, text="Reproducir", font=("Console", 30), background="#FF4D00",command=self.reproducirtext)
+        self.btnrepro = Button(self.ven2, text="Detener", font=("Console", 30), background="#FF4D00",command=self.detener)
         self.btnrepro.place(x=210, y=250)
         self.btncopiar = Button(self.ven2, text="Salir", font=("Console", 30), background="#FF4D00",command=self.salir)
         self.btncopiar.place(x=260, y=400)
@@ -71,25 +75,36 @@ class inicio:
     
     def grabar(self):
         
-        self.r = sr.Recognizer()
-        with sr.Microphone() as self.source:
-            print("ya puedes hablar")
-            self.audio = self.r.listen(self.source)
-            try:
-                self.text = self.r.recognize_google(self.audio)
-                self.txt2.insert(0, self.text)
-            except:
-                print("no se pudo escuchar")
+        self.detener_grabacion = False
+        self.resultado_texto.set("Grabando... Por favor, hable.")
+        
+        try:
+            with sr.Microphone() as source:
+                # Ajustar el ruido ambiental
+                self.recognizer.adjust_for_ambient_noise(source)
+                while not self.detener_grabacion:
+                    print("Escuchando...")
+                    audio = self.recognizer.listen(source, timeout=2, phrase_time_limit=5)
+                    print("Procesando el audio...")
+                    
+                    # Convertir audio a texto
+                    texto = self.recognizer.recognize_google(audio, language="es-ES")
+                    self.resultado_texto.set(f"Texto reconocido: {texto}")
+                    break  # Salir después de la primera grabación válida
+                
+        except sr.UnknownValueError:
+            self.resultado_texto.set("No se pudo entender el audio.")
+        except sr.RequestError as e:
+            self.resultado_texto.set(f"Error con el servicio: {e}")
+        except Exception as e:
+            self.resultado_texto.set(f"Error: {e}")
 
     def atras(self):
         self.ven2.place_forget()
     
-    def reproducirtext(self):
-        gta = gTTS(self.txt2.get(), lang="es-us")
-        if os.path.isfile("voz.mp3")==False:
-            gta.save("voz.mp3")
-            playsound("voz.mp3")
-            remove("voz.mp3")
+    def detener(self):
+        self.detener_grabacion = True
+        self.resultado_texto.set("Grabación detenida.")
         
 
 
